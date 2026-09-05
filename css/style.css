@@ -1,0 +1,84 @@
+/* глобальний reset на початку файлу стилів */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 1.2rem;
+  color: #334155;
+  background-color: #f4f1ea;
+  line-height: 1.5;
+}
+
+header {
+  background-color: #0d9488;
+  padding: 24px;
+}
+
+header > h1 {
+  font-size: 2rem;
+  color: white;
+}
+
+header > nav > a {
+  margin-right: 15px;
+}
+
+main {
+  max-width: 90%;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+#route_list_section {
+  margin-bottom: 15px;
+}
+
+.route {
+  padding: 14px;
+  margin-bottom: 50px;
+  box-shadow: 0 4px 10px #0d9488;
+  border: 2px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.route img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+  background-color: #0d9488;
+  border-radius: 10px;
+}
+
+.route > h3,
+p {
+  padding: 14px;
+  margin: 0;
+}
+
+#budget {
+  max-width: 50%;
+  margin: 50px auto;
+  padding: 5px 15px;
+  border: 2px solid;
+  background-color: #334155;
+  color: #f4f1ea;
+}
+
+#budget > p {
+  padding: 10px 0;
+  border-bottom: 1px solid;
+  margin: 0;
+}
+
+#footer {
+  background-color: #334155;
+  color: #f4f1ea;
+  font-size: 0.8rem;
+  padding: 15px;
+}
