@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Планувальник подорожей</title>
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Asap+Sharp:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <!-- Шапка з назвою -->
@@ -25,6 +31,10 @@
           <h2>Мої подорожі</h2>
           <div class="route_container">
             <article class="route">
+              <div
+                class="status-circle status-completed"
+                title="Завершена"
+              ></div>
               <img src="assets/img/warsaw.jpg" alt="picture of Warsaw" />
               <h3>Варшава</h3>
               <p>
@@ -35,6 +45,7 @@
               </p>
             </article>
             <article class="route">
+              <div class="status-circle status-planned" title="У планах"></div>
               <img src="assets/img/oslo.jpg" alt="picture of Oslo" />
               <h3>Осло</h3>
               <p>
@@ -45,6 +56,7 @@
               </p>
             </article>
             <article class="route">
+              <div class="status-circle status-ongoing" title="Триває"></div>
               <img
                 src="assets/img/dusseldorf.jpg"
                 alt="picture of Dusseldorf"
@@ -58,6 +70,7 @@
               </p>
             </article>
             <article class="route">
+              <div class="status-circle status-planned" title="У планах"></div>
               <img src="assets/img/kotelva.jpg" alt="picture of Kotelva" />
               <h3>Котельва</h3>
               <p>

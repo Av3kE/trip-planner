@@ -6,7 +6,7 @@
 }
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: "Asap Sharp", sans-serif;
   font-size: 1.2rem;
   color: #334155;
   background-color: #f4f1ea;
@@ -29,7 +29,12 @@ header > h1 {
 }
 
 header > nav > a {
-  margin-right: 15px;
+  color: white;
+  text-decoration: none;
+  margin: 0 15px 10px 0;
+  display: inline-block;
+  white-space: nowrap;
+  font-weight: bold;
 }
 
 main {
@@ -59,6 +64,7 @@ img {
   border: 2px;
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
 }
 
 .route img {
@@ -70,19 +76,65 @@ img {
   border-radius: 10px;
 }
 
+.route > h3 {
+  font-size: 22px;
+}
+
 .route > h3,
 .route > p {
   padding: 14px;
   margin: 0;
 }
 
+.status-circle {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 
+  Нечітка вимога: «має надихати на подорожі». 
+  Інтерпретація: Вимогу реалізовано через підбір природної палітри для міток статусів подорожі. 
+  Глибокий небесно-синій (#185fa5) асоціюється з океаном, теракотовий захід (#993c1d) нагадує про скелі та архітектуру, 
+  а лісовий зелений (#3b6d11) символізує ліси. Ці кольори є виразними, але не кричущими; вони гармонійно 
+  доповнюють основний тон морської хвилі та викликають приємні асоціації з різними пейзажами, 
+  мотивуючи користувача до нових мандрівок.
+*/
+
+.status-planned {
+  background-color: #185fa5;
+}
+
+.status-ongoing {
+  background-color: #993c1d;
+}
+
+.status-completed {
+  background-color: #3b6d11;
+}
+
+#route_details_section {
+  margin: 100px 0 45px;
+}
+
 #budget {
   max-width: 50%;
-  margin: 50px auto;
+  height: fit-content;
+  margin: 0 auto 50px;
   padding: 5px 15px;
-  border: 2px solid;
-  background-color: #334155;
+  background-color: #083344;
   color: #f4f1ea;
+}
+
+#budget > h3 {
+  color: #fbbf24;
+  font-size: 1.5rem;
+  text-align: center;
 }
 
 #budget > p {
@@ -92,10 +144,10 @@ img {
 }
 
 #footer {
-  background-color: #334155;
+  background-color: #083344;
   color: #f4f1ea;
   font-size: 0.8rem;
-  padding: 15px;
+  padding: 20px;
 }
 
 @media screen and (min-width: 600px) {
