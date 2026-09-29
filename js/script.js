@@ -1,4 +1,7 @@
-console.log("script підключено");
+// програмно видаляємо картки з подорожами
+const tripListCard = document.querySelectorAll(".route");
+
+tripListCard.forEach((card) => card.remove());
 
 //масив з об'єктами. Кожен об'єкт - подорож кудись. Місто, к-ть днів, закладений бюджет.
 
@@ -9,22 +12,44 @@ const trips = [
   { destination: "Kotelva", days: 10, budget: 400 },
 ];
 
-//обчислює та повертає значення, скільки грошей витрачається за один день у подорожі
+// встановлено мінімальний поріг для порівняння щоденної витрати грошей
+const lowCostThreshold = 150;
 
+//обчислює та повертає значення, скільки грошей витрачається за один день у подорожі
 const costPerDay = (trip) => Math.round(trip.budget / trip.days);
 
-//функція виводить найменування всіх подорожей та класифікує їх за вартістю: (дорого/дешево).
+// було видалено функцію showTripList(), щоб не повторювати функціонал. Частково логіку перенесено в renderRoutes();
 
-function tripList() {
+// асоціюємо змінну із айді контейнеру карток_роутів
+const listContainer = document.querySelector("#trips_list");
+
+// функція рендеру, що містить цикл, що проходиться по всім об'єктам та формує DOM-вузли
+function renderRoutes() {
   for (const trip of trips) {
-    console.log(trip.destination);
+    const article = document.createElement("aritcle");
+    article.classList.add('route');
+    const h3 = document.createElement("h3");
+    const p = document.createElement("p");
+    h3.textContent = trip.destination;
+    p.textContent = `${trip.days} днів, ${trip.budget} грн`;
+
     const dailyCost = costPerDay(trip);
-    if (dailyCost < 150) {
+    article.dataset.costPerDay = dailyCost;
+
+    if (dailyCost < lowCostThreshold) {
+      article.classList.add("budget");
       console.log(`Trip to ${trip.destination} is low-cost.`);
     } else {
+      article.classList.add("expensive");
       console.log(`Trip to ${trip.destination} is expensive.`);
     }
+
+    article.append(h3, p);
+    listContainer.append(article);
   }
 }
 
-tripList();
+renderRoutes();
+
+let tripsCount = document.querySelector('#trips_count');
+tripsCount.textContent = `Всього подорожей: ${trips.length}`;
