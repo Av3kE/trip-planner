@@ -158,6 +158,14 @@ img {
 }
 
 @media screen and (min-width: 1024px) {
+  main {
+    max-width: 100%;
+    margin: 0 50px;
+  }
+
+  #budget {
+    max-width: 100%;
+  }
   .route_container {
     grid-template-columns: repeat(3, 1fr);
   }
