@@ -12,6 +12,9 @@ const trips = [
   { destination: "Kotelva", days: 10, budget: 2020 },
 ];
 
+// встановлено мінімальний поріг для порівняння щоденної витрати грошей
+// Мінімальний розумний поріг бюджету на день (наприклад, 500 грн)
+const MIN_DAILY_BUDGET = 500;
 
 //обчислює та повертає значення, скільки грошей витрачається за один день у подорожі
 const costPerDay = (trip) => Math.round(trip.budget / trip.days);
@@ -27,7 +30,7 @@ function renderRoutes() {
   listContainer.innerHTML = "";
   
   for (const trip of trips) {
-    const article = document.createElement("aritcle");
+    const article = document.createElement("article");
     article.classList.add("route");
     const h3 = document.createElement("h3");
     const p = document.createElement("p");
@@ -83,10 +86,6 @@ form.addEventListener("submit", (event) => {
 
 const daysInput = document.querySelector("#days");
 const budgetInput = document.querySelector("#budget");
-
-// встановлено мінімальний поріг для порівняння щоденної витрати грошей
-// Мінімальний розумний поріг бюджету на день (наприклад, 500 грн)
-const MIN_DAILY_BUDGET = 500;
 
 function validateDailyBudget() {
   const days = Number(daysInput.value);
