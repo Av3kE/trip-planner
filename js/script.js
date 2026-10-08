@@ -1,3 +1,5 @@
+const apiUrl =
+  "https://api.restcountries.com/countries/v5/name?q=ukraine&api-key=rc_live_71afb18a50f54591aed73822fef329f3";
 // програмно видаляємо картки з подорожами
 const tripListCard = document.querySelectorAll(".route");
 
@@ -28,7 +30,7 @@ const listContainer = document.querySelector("#trips_list");
 function renderRoutes() {
   // очистка контейнеру від попереднього списку
   listContainer.innerHTML = "";
-  
+
   for (const trip of trips) {
     const article = document.createElement("article");
     article.classList.add("route");
@@ -36,10 +38,10 @@ function renderRoutes() {
     const p = document.createElement("p");
     h3.textContent = trip.destination;
     p.textContent = `${trip.days} днів, ${trip.budget} грн`;
-    
+
     const dailyCost = costPerDay(trip);
     article.dataset.costPerDay = dailyCost;
-    
+
     if (dailyCost < MIN_DAILY_BUDGET) {
       article.classList.add("budget");
       console.log(`Trip to ${trip.destination} is low-cost.`);
@@ -47,7 +49,7 @@ function renderRoutes() {
       article.classList.add("expensive");
       console.log(`Trip to ${trip.destination} is expensive.`);
     }
-    
+
     article.append(h3, p);
     listContainer.append(article);
   }
@@ -66,21 +68,21 @@ renderRoutes();
 const form = document.querySelector("#add_trip_form");
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  
+
   const destinationValue = document.querySelector("#destination").value.trim();
   const daysValue = Number(document.querySelector("#days").value);
   const budgetValue = Number(document.querySelector("#budget").value);
-  
+
   const newTrip = {
     destination: destinationValue,
     days: daysValue,
     budget: budgetValue,
   };
-  
+
   trips.push(newTrip);
-  
+
   renderRoutes();
-  
+
   form.reset();
 });
 
@@ -90,11 +92,11 @@ const budgetInput = document.querySelector("#budget");
 function validateDailyBudget() {
   const days = Number(daysInput.value);
   const budget = Number(budgetInput.value);
-  
+
   // Перевіряємо, коли обидва поля заповнені й дні більші за нуль
   if (days > 0 && budgetInput.value !== "") {
     const daily = Math.round(budget / days);
-    
+
     if (daily < MIN_DAILY_BUDGET) {
       budgetInput.setCustomValidity(
         `Бюджет на день (${daily} грн) занадто малий! Мінімум: ${MIN_DAILY_BUDGET} грн/день.`
@@ -111,8 +113,8 @@ function validateDailyBudget() {
 daysInput.addEventListener("input", validateDailyBudget);
 budgetInput.addEventListener("input", validateDailyBudget);
 
-// Вішаємо один обробник кліку на весь контейнер. 
-// При кліку на будь-який елемент всередині картки, скрипт знаходить саму картку (.route), 
+// Вішаємо один обробник кліку на весь контейнер.
+// При кліку на будь-який елемент всередині картки, скрипт знаходить саму картку (.route),
 // дістає з неї текстові дані та атрибут dataset, і виводить їх у блок деталей.
 const detailsText = document.querySelector("#route_details_section p");
 
@@ -126,4 +128,71 @@ listContainer.addEventListener("click", (event) => {
   const tripInfo = clickedTrip.querySelector("p").textContent;
   const dailyCost = clickedTrip.dataset.costPerDay;
   detailsText.textContent = `Обрана подорож ${destinationName}. Умови ${tripInfo}. Витрати на день складуть близько ${dailyCost} грн.`;
+});
+
+// Функція для показу/приховування статусу завантаження
+function showLoading(isLoading) {
+  const statusDiv = document.getElementById("api-status");
+  if (!statusDiv) return;
+
+  if (isLoading) {
+    statusDiv.textContent = "Завантаження даних...";
+    statusDiv.style.color = "blue"; // Синій колір для процесу
+  } else {
+    // Прибираємо текст тільки якщо там статус завантаження
+    // (щоб не затерти повідомлення про помилку, якщо вона сталася)
+    if (statusDiv.textContent === "Завантаження даних...") {
+      statusDiv.textContent = "";
+    }
+  }
+}
+
+// Функція для виведення помилки на екран
+function showError(message) {
+  const statusDiv = document.getElementById("api-status");
+  if (statusDiv) {
+    statusDiv.textContent = message;
+    statusDiv.style.color = "red"; // Червоний колір для помилки
+  }
+}
+
+// функція відповідає за підвантаження по АПІ даних про ту чи іншу країну з Rest Countries апі. Підтягує дані та створює картку з 
+// відповідними параметрами країни. Регулює поведінку мережевого індикатора. 
+
+async function loadDataCountry() {
+  showLoading(true);
+
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`Код ${response.status}`);
+    }
+    const data = await response.json();
+    const country = data.data.objects[0];
+
+    const newApiTrip = {
+      destination: country.names.common,
+      capital: country.capitals[0].name,
+      population: country.population,
+      flagUrl: country.flag.url_png,
+      days: 5,
+      budget: 15000,
+    };
+
+    trips.push(newApiTrip);
+    renderRoutes();
+  } catch (error) {
+    showError("Не вдалося завантажити дані. Спробуйте пізніше.");
+    console.error(error);
+  } finally {
+    showLoading(false);
+  }
+}
+loadDataCountry();
+
+// кнопка, що відповідає за повторнє виконання функції loadDataCountry() натисканням на кнопку
+
+const reloadButton = document.querySelector("#page_reload");
+reloadButton.addEventListener("click", (event) => {
+  loadDataCountry();
 });

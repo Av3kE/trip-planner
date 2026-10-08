@@ -37,6 +37,11 @@ header > nav > a {
   font-weight: bold;
 }
 
+#page_reload {
+  cursor: pointer;
+  padding: 10px 15px;
+}
+
 main {
   max-width: 90%;
   margin: 0 auto;
