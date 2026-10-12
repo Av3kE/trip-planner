@@ -1,5 +1,6 @@
-const apiUrl =
-  "https://api.restcountries.com/countries/v5/name?q=ukraine&api-key=rc_live_71afb18a50f54591aed73822fef329f3";
+//з безпекових міркувань було приховано реальний АПІ
+const API_URL = `https://api.restcountries.com/countries/v5/name?q=ukraine&api-key=YOUR_API_HERE`;
+
 // програмно видаляємо картки з подорожами
 const tripListCard = document.querySelectorAll(".route");
 
@@ -20,8 +21,6 @@ const MIN_DAILY_BUDGET = 500;
 
 //обчислює та повертає значення, скільки грошей витрачається за один день у подорожі
 const costPerDay = (trip) => Math.round(trip.budget / trip.days);
-
-// було видалено функцію showTripList(), щоб не повторювати функціонал. Частково логіку перенесено в renderRoutes();
 
 // асоціюємо змінну із айді контейнеру карток_роутів
 const listContainer = document.querySelector("#trips_list");
@@ -156,19 +155,29 @@ function showError(message) {
   }
 }
 
-// функція відповідає за підвантаження по АПІ даних про ту чи іншу країну з Rest Countries апі. Підтягує дані та створює картку з 
-// відповідними параметрами країни. Регулює поведінку мережевого індикатора. 
+// функція відповідає за підвантаження по АПІ даних про ту чи іншу країну з Rest Countries апі. Підтягує дані та створює картку з
+// відповідними параметрами країни. Регулює поведінку мережевого індикатора.
 
 async function loadDataCountry() {
   showLoading(true);
 
   try {
-    const response = await fetch(apiUrl);
+    const response = await fetch(API_URL);
+
+    if (response.status == 404) {
+      throw new Error("Країну не знайдено...");
+    }
+
     if (!response.ok) {
       throw new Error(`Код ${response.status}`);
     }
-    const data = await response.json();
-    const country = data.data.objects[0];
+    const responseData = await response.json();
+
+    if (!responseData.data.objects || responseData.data.objects.length === 0) {
+      throw new Error("Країну не знайдено…");
+    }
+
+    const country = responseData.data.objects[0];
 
     const newApiTrip = {
       destination: country.names.common,
@@ -182,7 +191,14 @@ async function loadDataCountry() {
     trips.push(newApiTrip);
     renderRoutes();
   } catch (error) {
-    showError("Не вдалося завантажити дані. Спробуйте пізніше.");
+    if (error.message === "Failed to fetch") {
+      showError(
+        "Не вдалося завантажити дані. Перевірте підключення до Інтернету."
+      );
+    } else {
+      // Якщо це 404 або інша помилка, виводимо її точне повідомлення (error.message)
+      showError(error.message);
+    }
     console.error(error);
   } finally {
     showLoading(false);
