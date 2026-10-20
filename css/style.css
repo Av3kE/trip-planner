@@ -51,7 +51,8 @@ header > nav > a {
   padding: 10px 15px;
 }
 
-main, #api_section {
+main,
+#api_section {
   max-width: 90%;
   margin: 0 auto;
   padding: 10px;
@@ -88,6 +89,22 @@ img {
   display: block;
   background-color: #0d9488;
   border-radius: 10px;
+}
+
+.route img.flag {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 28px;
+  object-fit: contain;
+  background: none;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.route:has(.flag) > h3 {
+  padding-right: 70px;
 }
 
 .route > h3 {
@@ -172,7 +189,8 @@ img {
 }
 
 @media screen and (min-width: 1024px) {
-  main, #api_section {
+  main,
+  #api_section {
     max-width: 100%;
     margin: 0 50px;
   }

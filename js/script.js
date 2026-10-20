@@ -1,5 +1,5 @@
-// через застарілість посилання, наразі є неможливим фактично реалізувати вимогу
-const API_URL = "https://restcountries.com/v3.1/name/";
+const API_BASE = "https://api.restcountries.com/countries/v5/name";
+const API_KEY = "rc_live_8e7e67a1455c417e8d04c56ade28079d";
 
 // програмно видаляємо картки з подорожами
 const tripListCard = document.querySelectorAll(".route");
@@ -61,8 +61,7 @@ function renderRoutes() {
       const flagImg = document.createElement("img");
       flagImg.src = trip.flagUrl;
       flagImg.alt = `Прапор ${trip.destination}`;
-      flagImg.style.width = "60px";
-      flagImg.style.marginTop = "8px";
+      flagImg.classList.add("flag")
       article.append(flagImg);
     }
 
@@ -147,7 +146,7 @@ listContainer.addEventListener("click", (event) => {
 
 // Функція для показу/приховування статусу завантаження
 function showLoading(isLoading) {
-  const statusDiv = document.getElementById("api-status");
+  const statusDiv = document.getElementById("api_status");
   if (!statusDiv) return;
 
   if (isLoading) {
@@ -164,7 +163,7 @@ function showLoading(isLoading) {
 
 // Функція для виведення помилки на екран
 function showError(message) {
-  const statusDiv = document.getElementById("api-status");
+  const statusDiv = document.getElementById("api_status");
   if (statusDiv) {
     statusDiv.textContent = message;
     statusDiv.style.color = "red"; // Червоний колір для помилки
@@ -174,43 +173,46 @@ function showError(message) {
 // функція відповідає за підвантаження по АПІ даних про ту чи іншу країну з Rest Countries апі. Підтягує дані та створює картку з
 // відповідними параметрами країни. Регулює поведінку мережевого індикатора.
 
-// Функція тепер приймає назву країни (за замовчуванням "ukraine", якщо нічого не передано)
+// API: REST Countries v5, https://restcountries.com/docs/countries
 async function loadDataCountry(countryName = "ukraine") {
-  showError("");
   showLoading(true);
 
   try {
-    const response = await fetch(
-      `${API_URL}${encodeURIComponent(countryName)}`
-    );
+    const url = `${API_BASE}?q=${encodeURIComponent(countryName)}&response_fields_omit=names.translations&api-key=${API_KEY}`;
+    const response = await fetch(url);
 
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Помилка доступу до API. Перевірте ключ.");
+    }
     if (response.status === 404) {
       throw new Error("Країну не знайдено, перевірте написання.");
     }
-
     if (!response.ok) {
       throw new Error(`Код помилки: ${response.status}`);
     }
 
-    const data = await response.json();
-    const country = data[0];
+    const json = await response.json();
+    console.log(json);
+    const countries = json.data?.objects ?? [];
 
-    const newApiTrip = {
-      destination: country.name.common,
-      capital: country.capital ? country.capital[0] : "Немає даних",
+    // v5 повертає 200 з порожнім масивом, якщо нічого не знайдено
+    if (countries.length === 0) {
+      throw new Error("Країну не знайдено, перевірте написання.");
+    }
+
+    const country = countries[0];
+    trips.push({
+      destination: country.names.common,
+      capital: country.capitals?.[0]?.name ?? "Немає даних",
       population: country.population,
-      flagUrl: country.flags.png,
+      flagUrl: country.flag?.url_png,
       days: 5,
       budget: 15000,
-    };
-
-    trips.push(newApiTrip);
+    });
     renderRoutes();
   } catch (error) {
     if (error.message === "Failed to fetch") {
-      showError(
-        "Не вдалося завантажити дані. Перевірте підключення до Інтернету."
-      );
+      showError("Не вдалося завантажити дані. Перевірте підключення до Інтернету.");
     } else {
       showError(error.message);
     }
