@@ -11,7 +11,10 @@
       href="https://fonts.googleapis.com/css2?family=Asap+Sharp:ital,wght@0,100..900;1,100..900&display=swap"
       rel="stylesheet"
     />
-    <script src="/js/script.js" defer></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel" src="js/script.js"></script>
   </head>
   <body>
     <!-- Шапка з назвою -->
@@ -28,7 +31,12 @@
     <div id="api_section">
       <div id="api_status"></div>
       <h2>Знайти країну</h2>
-      <input type="text" id="country_search" placeholder="Введіть країну (напр. poland)" value="ukraine" />
+      <input
+        type="text"
+        id="country_search"
+        placeholder="Введіть країну (напр. poland)"
+        value="ukraine"
+      />
       <button id="page_reload" type="button">Знайти / Оновити</button>
     </div>
     <div class="wrapper">
@@ -38,15 +46,35 @@
           <form id="add_trip_form">
             <div>
               <label for="destination">Напрямок</label>
-              <input type="text" id="destination" name="destination" placeholder="Віфлеєм" required />
+              <input
+                type="text"
+                id="destination"
+                name="destination"
+                placeholder="Віфлеєм"
+                required
+              />
             </div>
             <div>
               <label for="days">Кількість днів</label>
-              <input type="number" id="days" name="days" min="1" placeholder="3" required />
+              <input
+                type="number"
+                id="days"
+                name="days"
+                min="1"
+                placeholder="3"
+                required
+              />
             </div>
             <div>
               <label for="budget">Бюджет</label>
-              <input type="number" id="budget" name="budget" min="0" placeholder="5000" required />
+              <input
+                type="number"
+                id="budget"
+                name="budget"
+                min="0"
+                placeholder="5000"
+                required
+              />
             </div>
 
             <button type="submit">Додати подорож</button>
@@ -56,7 +84,7 @@
         <section id="route_list_section">
           <h2>Мої подорожі</h2>
           <p id="trips_count"></p>
-          <div class="route_container" id="trips_list">
+          <div id="trips_list">
             <article class="route">
               <div
                 class="status-circle status-completed"
