@@ -37,12 +37,21 @@ header > nav > a {
   font-weight: bold;
 }
 
+#country_search {
+  width: 200px;
+}
+
+#api_status {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
 #page_reload {
   cursor: pointer;
   padding: 10px 15px;
 }
 
-main {
+main, #api_section {
   max-width: 90%;
   margin: 0 auto;
   padding: 10px;
@@ -163,7 +172,7 @@ img {
 }
 
 @media screen and (min-width: 1024px) {
-  main {
+  main, #api_section {
     max-width: 100%;
     margin: 0 50px;
   }

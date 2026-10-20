@@ -1,5 +1,5 @@
-//з безпекових міркувань було приховано реальний АПІ
-const API_URL = `https://api.restcountries.com/countries/v5/name?q=ukraine&api-key=YOUR_API_HERE`;
+// через застарілість посилання, наразі є неможливим фактично реалізувати вимогу
+const API_URL = "https://restcountries.com/v3.1/name/";
 
 // програмно видаляємо картки з подорожами
 const tripListCard = document.querySelectorAll(".route");
@@ -50,6 +50,22 @@ function renderRoutes() {
     }
 
     article.append(h3, p);
+    
+    if (trip.capital && trip.population) {
+      const apiInfo = document.createElement("p");
+      apiInfo.textContent = `Столиця: ${trip.capital}, Населення: ${trip.population}`;
+      article.append(apiInfo);
+    }
+
+    if (trip.flagUrl) {
+      const flagImg = document.createElement("img");
+      flagImg.src = trip.flagUrl;
+      flagImg.alt = `Прапор ${trip.destination}`;
+      flagImg.style.width = "60px";
+      flagImg.style.marginTop = "8px";
+      article.append(flagImg);
+    }
+
     listContainer.append(article);
   }
   // логіка лічильнику подорожей
@@ -158,32 +174,32 @@ function showError(message) {
 // функція відповідає за підвантаження по АПІ даних про ту чи іншу країну з Rest Countries апі. Підтягує дані та створює картку з
 // відповідними параметрами країни. Регулює поведінку мережевого індикатора.
 
-async function loadDataCountry() {
+// Функція тепер приймає назву країни (за замовчуванням "ukraine", якщо нічого не передано)
+async function loadDataCountry(countryName = "ukraine") {
+  showError("");
   showLoading(true);
 
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(
+      `${API_URL}${encodeURIComponent(countryName)}`
+    );
 
-    if (response.status == 404) {
-      throw new Error("Країну не знайдено...");
+    if (response.status === 404) {
+      throw new Error("Країну не знайдено, перевірте написання.");
     }
 
     if (!response.ok) {
-      throw new Error(`Код ${response.status}`);
-    }
-    const responseData = await response.json();
-
-    if (!responseData.data.objects || responseData.data.objects.length === 0) {
-      throw new Error("Країну не знайдено…");
+      throw new Error(`Код помилки: ${response.status}`);
     }
 
-    const country = responseData.data.objects[0];
+    const data = await response.json();
+    const country = data[0];
 
     const newApiTrip = {
-      destination: country.names.common,
-      capital: country.capitals[0].name,
+      destination: country.name.common,
+      capital: country.capital ? country.capital[0] : "Немає даних",
       population: country.population,
-      flagUrl: country.flag.url_png,
+      flagUrl: country.flags.png,
       days: 5,
       budget: 15000,
     };
@@ -196,7 +212,6 @@ async function loadDataCountry() {
         "Не вдалося завантажити дані. Перевірте підключення до Інтернету."
       );
     } else {
-      // Якщо це 404 або інша помилка, виводимо її точне повідомлення (error.message)
       showError(error.message);
     }
     console.error(error);
@@ -204,11 +219,15 @@ async function loadDataCountry() {
     showLoading(false);
   }
 }
-loadDataCountry();
-
-// кнопка, що відповідає за повторнє виконання функції loadDataCountry() натисканням на кнопку
 
 const reloadButton = document.querySelector("#page_reload");
-reloadButton.addEventListener("click", (event) => {
-  loadDataCountry();
+const countrySearchInput = document.querySelector("#country_search");
+
+reloadButton.addEventListener("click", () => {
+  const query = countrySearchInput && countrySearchInput.value.trim() !== "" 
+    ? countrySearchInput.value.trim() 
+    : "ukraine";
+  loadDataCountry(query);
 });
+
+loadDataCountry(countrySearchInput ? countrySearchInput.value.trim() : "ukraine");
