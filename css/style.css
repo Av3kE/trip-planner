@@ -149,6 +149,11 @@ img {
   background-color: #3b6d11;
 }
 
+.db_error {
+  color: red;
+  font-weight: "bold";
+}
+
 #route_details_section {
   margin: 100px 0 45px;
 }

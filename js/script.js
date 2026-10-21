@@ -1,7 +1,7 @@
 // фреймворком обрано React 18 оскільки на фахівців з React більше попит на ринку ніж з Vue
 
 const API_BASE = "https://api.restcountries.com/countries/v5/name";
-const API_KEY = "rc_live_8c5fc117db854fb4b6e876ce3335bc19";
+const API_KEY = "API_HERE";
 
 //масив з об'єктами. Кожен об'єкт - подорож кудись. Місто, к-ть днів, закладений бюджет.
 function App() {
@@ -56,6 +56,239 @@ function TripCard({ destination, days, budget }) {
   );
 }
 
+const STORAGE_KEY = "tripStops";
+
+function saveToLocalStorage(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function loadFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (error) {
+    console.error("Пошкоджені дані в localStorage:", error);
+    return [];
+  }
+}
+
+// Схема IndexedDB: база TravelDB (версія 1), одне сховище tripStops з ключем id
+const DB_NAME = "TravelDB";
+const DB_VERSION = 1;
+const STORE_NAME = "tripStops";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Додає запис або оновлює наявний з тим самим id (put)
+async function addItem(item) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(item);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// Оновлення використовує той самий put: запис з таким id буде перезаписано
+async function updateItem(item) {
+  return addItem(item);
+}
+
+// Повертає масив усіх пунктів маршруту зі сховища
+async function getAllItems() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const request = tx.objectStore(STORE_NAME).getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Видаляє запис за id
+async function deleteItem(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// Одноразово переносить пункти маршруту з localStorage в IndexedDB
+async function migrateFromLocalStorage() {
+  if (localStorage.getItem("migrated") === "true") return; // вже переносили
+
+  const existing = await getAllItems(); // що вже є в IndexedDB
+  const old = loadFromLocalStorage(); // що лежить у localStorage
+
+  if (existing.length === 0 && old.length > 0) {
+    for (const item of old) {
+      await addItem(item);
+    }
+  }
+  localStorage.setItem("migrated", "true"); // прапорець: більше не повторювати
+}
+
+// ще один компонент React'y
+function StopsPlanner() {
+  const [stops, setStops] = React.useState([]);
+
+  const [dbError, setDbError] = React.useState("");
+  // читає всі пункти з IndexedDB і кладе їх у стан (перемальовує список)
+  async function refreshStops() {
+    const items = await getAllItems();
+    setStops(items);
+  }
+
+  // виконається один раз після першого показу компонента
+  React.useEffect(() => {
+    async function init() {
+      try {
+        await migrateFromLocalStorage(); // одноразове перенесення старих даних
+        await refreshStops(); // завантажуємо список із бази
+      } catch (error) {
+        console.error("Помилка IndexedDB:", error);
+        setDbError(
+          "Не вдалося відкрити локальну базу даних. Можливо, браузер блокує сховище (наприклад, у режимі приватного перегляду). Зміни не буде збережено."
+        );
+      }
+    }
+    init();
+  }, []);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const data = Object.fromEntries(new FormData(form));
+
+    if (data.dateTo < data.dateFrom) {
+      alert("Дата завершення не може бути раніше за дату початку");
+      return;
+    }
+
+    const newStop = {
+      id: Date.now(),
+      country: data.country.trim(),
+      city: data.city.trim(),
+      dateFrom: data.dateFrom,
+      dateTo: data.dateTo,
+      notes: data.notes.trim(),
+    };
+
+    try {
+      await addItem(newStop);
+      await refreshStops();
+      form.reset();
+      setDbError("");
+    } catch (error) {
+      console.error("Помилка збереження:", error);
+      setDbError("Не вдалося зберегти пункт маршруту.");
+    }
+  }
+
+  async function handleDelete(id) {
+    try {
+      await deleteItem(id);
+      await refreshStops();
+      setDbError("");
+    } catch (error) {
+      console.error("Помилка видалення:", error);
+      setDbError("Не вдалося видалити пункт маршруту.");
+    }
+  }
+
+  //копія масиву і його зміна - сортування за датою початку
+  const sortedStops = [...stops].sort((a, b) =>
+    a.dateFrom.localeCompare(b.dateFrom)
+  );
+
+  return (
+    <>
+      {dbError && (
+        <p role="alert" className="db_error">
+          {dbError}
+        </p>
+      )}
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>
+            Країна <input type="text" name="country" required />
+          </label>
+        </div>
+        <div>
+          <label>
+            Місто <input type="text" name="city" required />
+          </label>
+        </div>
+        <div>
+          <label>
+            Дата початку{" "}
+            <input
+              type="date"
+              name="dateFrom"
+              min="1950-01-01"
+              max="2100-12-31"
+              required
+            />
+          </label>
+        </div>
+        <div>
+          <label>
+            Дата завершення{" "}
+            <input
+              type="date"
+              name="dateTo"
+              min="1950-01-01"
+              max="2100-12-31"
+              required
+            />
+          </label>
+        </div>
+        <div>
+          <label>
+            Нотатки <textarea name="notes"></textarea>
+          </label>
+        </div>
+        <button type="submit">Додати пункт</button>
+      </form>
+
+      {sortedStops.length === 0 ? (
+        <p>Пунктів маршруту ще немає</p>
+      ) : (
+        <ul>
+          {sortedStops.map((stop) => (
+            <li key={stop.id}>
+              {stop.dateFrom} – {stop.dateTo}: {stop.city}, {stop.country}
+              {stop.notes && ` (${stop.notes})`}
+              <button onClick={() => handleDelete(stop.id)}>Видалити</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("stops_root")).render(
+  <StopsPlanner />
+);
 // // встановлено мінімальний поріг для порівняння щоденної витрати грошей
 // // Мінімальний розумний поріг бюджету на день (наприклад, 500 грн)
 // const MIN_DAILY_BUDGET = 500;
