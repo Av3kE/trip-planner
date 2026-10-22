@@ -117,6 +117,14 @@ img {
   margin: 0;
 }
 
+.route-map {
+  display: block;
+  max-width: 100%;   /* на вузьких екранах полотно зменшується */
+  height: auto;
+  margin: 20px 0 10px;
+  border-radius: 10px;
+}
+
 .status-circle {
   position: absolute;
   top: 25px;

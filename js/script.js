@@ -146,6 +146,123 @@ async function migrateFromLocalStorage() {
   localStorage.setItem("migrated", "true"); // прапорець: більше не повторювати
 }
 
+function RouteMap({ stops }) {
+  const canvasRef = React.useRef(null);
+  const [replayCount, setReplayCount] = React.useState(0); // лічильник «програти знову»
+
+  React.useEffect(() => {
+    const ctx = canvasRef.current.getContext("2d");
+    const points = getMapPoints(stops);
+    const lastIndex = Math.max(points.length - 1, 0); // скільки відрізків у маршруті
+    let progress = 0;
+    let frameId;
+
+    // Крок 5: цикл анімації — оновити стан, перемалювати кадр, запланувати наступний
+    function animate() {
+      progress = Math.min(progress + 0.03, lastIndex);
+      drawMap(ctx, points, progress);
+      if (progress < lastIndex) {
+        frameId = requestAnimationFrame(animate);
+      }
+    }
+    animate();
+
+    // Крок 8: прибирання — зупиняємо цикл, коли дані змінились або компонент зник
+    return () => cancelAnimationFrame(frameId);
+  }, [stops, replayCount]); // Крок 6: перезапуск при зміні пунктів або натисканні кнопки
+
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={MAP_WIDTH}
+        height={MAP_HEIGHT}
+        className="route-map"
+      ></canvas>
+      <button type="button" onClick={() => setReplayCount(replayCount + 1)}>
+        Програти маршрут
+      </button>
+    </div>
+  );
+}
+
+const MAP_WIDTH = 600;
+const MAP_HEIGHT = 260;
+const MAP_PADDING = 40;
+
+// Перетворює назву міста на стабільне число 0..1 (щоб місто завжди було на тому самому місці)
+function cityToNumber(text) {
+  let hash = 0;
+  for (const char of text) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 100000;
+  }
+  return hash / 100000;
+}
+
+// Обчислює координати точок на полотні за масивом пунктів (вхід уже відсортований за датою)
+function getMapPoints(stops) {
+  return stops.map((stop, index) => {
+    const x =
+      stops.length === 1
+        ? MAP_WIDTH / 2
+        : MAP_PADDING +
+          (index * (MAP_WIDTH - 2 * MAP_PADDING)) / (stops.length - 1);
+    const y =
+      MAP_PADDING + cityToNumber(stop.city) * (MAP_HEIGHT - 2 * MAP_PADDING);
+    return { x, y, label: stop.city };
+  });
+}
+function drawMap(ctx, points, progress) {
+  ctx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT); // стираємо попередній кадр
+  ctx.fillStyle = "#083344";
+  ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT); // фон
+
+  if (points.length === 0) {
+    ctx.fillStyle = "#f4f1ea";
+    ctx.font = "16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Додайте пункти маршруту", MAP_WIDTH / 2, MAP_HEIGHT / 2);
+    return;
+  }
+
+  // 1) лінія маршруту
+  const fullSegments = Math.floor(progress); // скільки відрізків намальовано повністю
+  ctx.strokeStyle = "#0d9488";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i <= fullSegments; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  if (fullSegments < points.length - 1) {
+    // частково намальований відрізок
+    const t = progress - fullSegments; // 0..1: яку частину відрізка вже пройдено
+    const from = points[fullSegments];
+    const to = points[fullSegments + 1];
+    ctx.lineTo(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t);
+  }
+  ctx.stroke();
+
+  // 2) точки з номерами та підписами (з'являються, коли лінія до них дійшла)
+  points.forEach((point, i) => {
+    if (i > progress) return;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 9, 0, Math.PI * 2);
+    ctx.fillStyle = "#fbbf24";
+    ctx.fill();
+
+    ctx.fillStyle = "#083344";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(i + 1, point.x, point.y);
+
+    ctx.fillStyle = "#f4f1ea";
+    ctx.font = "13px sans-serif";
+    ctx.fillText(point.label, point.x, point.y - 20);
+  });
+}
+
 // ще один компонент React'y
 function StopsPlanner() {
   const [stops, setStops] = React.useState([]);
@@ -214,9 +331,9 @@ function StopsPlanner() {
     }
   }
 
-  //копія масиву і його зміна - сортування за датою початку
-  const sortedStops = [...stops].sort((a, b) =>
-    a.dateFrom.localeCompare(b.dateFrom)
+  const sortedStops = React.useMemo(
+    () => [...stops].sort((a, b) => a.dateFrom.localeCompare(b.dateFrom)),
+    [stops]
   );
 
   return (
@@ -282,6 +399,7 @@ function StopsPlanner() {
           ))}
         </ul>
       )}
+      <RouteMap stops={sortedStops} />
     </>
   );
 }
@@ -289,6 +407,7 @@ function StopsPlanner() {
 ReactDOM.createRoot(document.getElementById("stops_root")).render(
   <StopsPlanner />
 );
+
 // // встановлено мінімальний поріг для порівняння щоденної витрати грошей
 // // Мінімальний розумний поріг бюджету на день (наприклад, 500 грн)
 // const MIN_DAILY_BUDGET = 500;
