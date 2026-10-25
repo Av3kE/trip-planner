@@ -1,60 +1,11 @@
 // фреймворком обрано React 18 оскільки на фахівців з React більше попит на ринку ніж з Vue
-
-const API_BASE = "https://api.restcountries.com/countries/v5/name";
-const API_KEY = "API_HERE";
-
-//масив з об'єктами. Кожен об'єкт - подорож кудись. Місто, к-ть днів, закладений бюджет.
-function App() {
-  const [trips, setTrips] = React.useState([
-    { id: 1, destination: "Warsaw", days: 7, budget: 7000 },
-    { id: 2, destination: "Oslo", days: 4, budget: 5405 },
-    { id: 3, destination: "Dusseldorf", days: 2, budget: 5150 },
-    { id: 4, destination: "Kotelva", days: 10, budget: 2020 },
-  ]);
-
-  return (
-    <>
-      <button
-        onClick={() =>
-          setTrips([
-            ...trips,
-            { id: Date.now(), destination: "Test", days: 2, budget: 3000 },
-          ])
-        }
-      >
-        Додати тест
-      </button>
-      <p>Всього подорожей: {trips.length}</p>
-      <div className="route_container">
-        {trips.map((trip) => (
-          <TripCard
-            key={trip.id}
-            destination={trip.destination}
-            days={trip.days}
-            budget={trip.budget}
-          />
-        ))}
-      </div>
-    </>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("trips_list")).render(<App />);
-
-//props.destination, props.days... деструктурізація відбулася
-function TripCard({ destination, days, budget }) {
-  const costPerDay = Math.round(budget / days);
-
-  return (
-    <article className="route">
-      <h3>{destination}</h3>
-      <p>
-        {days} днів, {budget} грн
-      </p>
-      <p>Витрати на день: {costPerDay} грн</p>
-    </article>
-  );
-}
+// Поїздки (початкові дані з практикуму 10); пункти маршруту зберігаються в IndexedDB
+const TRIPS = [
+  { id: 1, destination: "Warsaw",     days: 7,  budget: 7000 },
+  { id: 2, destination: "Oslo",       days: 4,  budget: 5405 },
+  { id: 3, destination: "Dusseldorf", days: 2,  budget: 5150 },
+  { id: 4, destination: "Kotelva",    days: 10, budget: 2020 },
+];
 
 const STORAGE_KEY = "tripStops";
 
@@ -131,6 +82,17 @@ async function deleteItem(id) {
   });
 }
 
+// Повертає один пункт за id (undefined, якщо запису немає)
+async function getItemById(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const request = tx.objectStore(STORE_NAME).get(id);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // Одноразово переносить пункти маршруту з localStorage в IndexedDB
 async function migrateFromLocalStorage() {
   if (localStorage.getItem("migrated") === "true") return; // вже переносили
@@ -144,46 +106,6 @@ async function migrateFromLocalStorage() {
     }
   }
   localStorage.setItem("migrated", "true"); // прапорець: більше не повторювати
-}
-
-function RouteMap({ stops }) {
-  const canvasRef = React.useRef(null);
-  const [replayCount, setReplayCount] = React.useState(0); // лічильник «програти знову»
-
-  React.useEffect(() => {
-    const ctx = canvasRef.current.getContext("2d");
-    const points = getMapPoints(stops);
-    const lastIndex = Math.max(points.length - 1, 0); // скільки відрізків у маршруті
-    let progress = 0;
-    let frameId;
-
-    // Крок 5: цикл анімації — оновити стан, перемалювати кадр, запланувати наступний
-    function animate() {
-      progress = Math.min(progress + 0.03, lastIndex);
-      drawMap(ctx, points, progress);
-      if (progress < lastIndex) {
-        frameId = requestAnimationFrame(animate);
-      }
-    }
-    animate();
-
-    // Крок 8: прибирання — зупиняємо цикл, коли дані змінились або компонент зник
-    return () => cancelAnimationFrame(frameId);
-  }, [stops, replayCount]); // Крок 6: перезапуск при зміні пунктів або натисканні кнопки
-
-  return (
-    <div>
-      <canvas
-        ref={canvasRef}
-        width={MAP_WIDTH}
-        height={MAP_HEIGHT}
-        className="route-map"
-      ></canvas>
-      <button type="button" onClick={() => setReplayCount(replayCount + 1)}>
-        Програти маршрут
-      </button>
-    </div>
-  );
 }
 
 const MAP_WIDTH = 600;
@@ -212,6 +134,8 @@ function getMapPoints(stops) {
     return { x, y, label: stop.city };
   });
 }
+
+// Малює один кадр: progress — скільки відрізків лінії вже «пройдено» (дробове число)
 function drawMap(ctx, points, progress) {
   ctx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT); // стираємо попередній кадр
   ctx.fillStyle = "#083344";
@@ -263,15 +187,75 @@ function drawMap(ctx, points, progress) {
   });
 }
 
+// Посилання для клієнтської навігації (обробляється обробником кліку з data-link)
+function Link({ to, children }) {
+  return <a href={"#" + to} data-link>{children}</a>;
+}
+
+// Картка поїздки: props отримано деструктуризацією; costPerDay — похідне значення
+function TripCard({ id, destination, days, budget }) {
+  const costPerDay = Math.round(budget / days);
+  return (
+    <article className="route">
+      <h3>{destination}</h3>
+      <p>{days} днів, {budget} грн</p>
+      <p>Витрати на день: {costPerDay} грн</p>
+      <p><Link to={`/trip/${id}`}>Пункти маршруту →</Link></p>
+    </article>
+  );
+}
+
+// Міні-карта маршруту на Canvas з анімацією через requestAnimationFrame
+function RouteMap({ stops }) {
+  const canvasRef = React.useRef(null);
+  const [replayCount, setReplayCount] = React.useState(0); // лічильник «програти знову»
+
+  React.useEffect(() => {
+    const ctx = canvasRef.current.getContext("2d");
+    const points = getMapPoints(stops);
+    const lastIndex = Math.max(points.length - 1, 0); // скільки відрізків у маршруті
+    let progress = 0;
+    let frameId;
+
+    // Крок 5: цикл анімації — оновити стан, перемалювати кадр, запланувати наступний
+    function animate() {
+      progress = Math.min(progress + 0.03, lastIndex);
+      drawMap(ctx, points, progress);
+      if (progress < lastIndex) {
+        frameId = requestAnimationFrame(animate);
+      }
+    }
+    animate();
+
+    // Крок 8: прибирання — зупиняємо цикл, коли дані змінились або компонент зник
+    return () => cancelAnimationFrame(frameId);
+  }, [stops, replayCount]); // Крок 6: перезапуск при зміні пунктів або натисканні кнопки
+
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={MAP_WIDTH}
+        height={MAP_HEIGHT}
+        className="route-map"
+      ></canvas>
+      <button type="button" onClick={() => setReplayCount(replayCount + 1)}>
+        Програти маршрут
+      </button>
+    </div>
+  );
+}
+
+// Форма, список пунктів обраної поїздки та міні-карта (дані з IndexedDB)
 // ще один компонент React'y
-function StopsPlanner() {
+function StopsPlanner({ tripId }) {
   const [stops, setStops] = React.useState([]);
 
   const [dbError, setDbError] = React.useState("");
   // читає всі пункти з IndexedDB і кладе їх у стан (перемальовує список)
   async function refreshStops() {
     const items = await getAllItems();
-    setStops(items);
+    setStops(items.filter((item) => item.tripId === tripId));
   }
 
   // виконається один раз після першого показу компонента
@@ -302,6 +286,7 @@ function StopsPlanner() {
 
     const newStop = {
       id: Date.now(),
+      tripId,
       country: data.country.trim(),
       city: data.city.trim(),
       dateFrom: data.dateFrom,
@@ -392,7 +377,10 @@ function StopsPlanner() {
         <ul>
           {sortedStops.map((stop) => (
             <li key={stop.id}>
-              {stop.dateFrom} – {stop.dateTo}: {stop.city}, {stop.country}
+              {stop.dateFrom} – {stop.dateTo}:{" "}
+              <Link to={`/trip/${tripId}/stop/${stop.id}`}>
+                {stop.city}, {stop.country}
+              </Link>
               {stop.notes && ` (${stop.notes})`}
               <button onClick={() => handleDelete(stop.id)}>Видалити</button>
             </li>
@@ -404,233 +392,140 @@ function StopsPlanner() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("stops_root")).render(
-  <StopsPlanner />
-);
+// Маршрут «/»: список поїздок (повторно використовує TripCard)
+function HomePage() {
+  return (
+    <>
+      <h2>Мої подорожі</h2>
+      <p>Всього подорожей: {TRIPS.length}</p>
+      <div className="route_container">
+        {TRIPS.map((trip) => (
+          <TripCard key={trip.id} {...trip} />
+        ))}
+      </div>
+    </>
+  );
+}
 
-// // встановлено мінімальний поріг для порівняння щоденної витрати грошей
-// // Мінімальний розумний поріг бюджету на день (наприклад, 500 грн)
-// const MIN_DAILY_BUDGET = 500;
+// Маршрут «/trip/:id»: пункти маршруту обраної поїздки
+function TripPage({ params }) {
+  const tripId = Number(params.id); // параметр — рядок
+  const trip = TRIPS.find((t) => t.id === tripId);
+  if (!trip) return <NotFoundPage />;
+  return (
+    <>
+      <p><Link to="/">← До списку поїздок</Link></p>
+      <h2>{trip.destination}</h2>
+      <p>{trip.days} днів, {trip.budget} грн</p>
+      <StopsPlanner key={tripId} tripId={tripId} />
+    </>
+  );
+}
 
-// //обчислює та повертає значення, скільки грошей витрачається за один день у подорожі
-// const costPerDay = (trip) => Math.round(trip.budget / trip.days);
+// Маршрут «/trip/:id/stop/:stopId»: деталі одного пункту маршруту
+function StopPage({ params }) {
+  const tripId = Number(params.id);
+  const stopId = Number(params.stopId);
+  // undefined — ще завантажується, null — запису немає
+  const [stop, setStop] = React.useState(undefined);
 
-// // асоціюємо змінну із айді контейнеру карток_роутів
-// const listContainer = document.querySelector("#trips_list");
+  React.useEffect(() => {
+    getItemById(stopId)
+      .then((item) => {
+        setStop(item && item.tripId === tripId ? item : null);
+      })
+      .catch((error) => {
+        console.error("Помилка читання пункту:", error);
+        setStop(null); // не залишаємо екран на «Завантаження...» при помилці бази
+      });
+  }, [stopId, tripId]);
 
-// Крок 7: старий ручний DOM-код замінено React-компонентами
-// // функція рендеру, що містить цикл, що проходиться по всім об'єктам та формує DOM-вузли
-// function renderRoutes() {
-//   // очистка контейнеру від попереднього списку
-//   listContainer.innerHTML = "";
+  if (stop === undefined) return <p>Завантаження...</p>;
+  if (stop === null) return <NotFoundPage />;
 
-//   for (const trip of trips) {
-//     const article = document.createElement("article");
-//     article.classList.add("route");
-//     const h3 = document.createElement("h3");
-//     const p = document.createElement("p");
-//     h3.textContent = trip.destination;
-//     p.textContent = `${trip.days} днів, ${trip.budget} грн`;
+  return (
+    <>
+      <p><Link to={`/trip/${tripId}`}>← До пунктів поїздки</Link></p>
+      <h2>{stop.city}, {stop.country}</h2>
+      <p>Дати: {stop.dateFrom} – {stop.dateTo}</p>
+      <p>Нотатки: {stop.notes || "немає"}</p>
+    </>
+  );
+}
 
-//     const dailyCost = costPerDay(trip);
-//     article.dataset.costPerDay = dailyCost;
+// Сторінка 404: з'являється, коли маршруту чи запису немає
+function NotFoundPage() {
+  return (
+    <>
+      <h2>Сторінку не знайдено</h2>
+      <p><Link to="/">На головну</Link></p>
+    </>
+  );
+}
 
-//     if (dailyCost < MIN_DAILY_BUDGET) {
-//       article.classList.add("budget");
-//       console.log(`Trip to ${trip.destination} is low-cost.`);
-//     } else {
-//       article.classList.add("expensive");
-//       console.log(`Trip to ${trip.destination} is expensive.`);
-//     }
+// Таблиця маршрутів: патерн шляху → view-функція. Сегмент :name — параметр
+const routes = [
+  { path: "/", view: HomePage },
+  { path: "/trip/:id", view: TripPage },
+  { path: "/trip/:id/stop/:stopId", view: StopPage },
+];
 
-//     article.append(h3, p);
+// Порівнює шлях з патернами; повертає { view, params } або null, якщо маршруту немає
+function matchRoute(path) {
+  const pathParts = path.split("/").filter(Boolean);
+  for (const route of routes) {
+    const routeParts = route.path.split("/").filter(Boolean);
+    if (routeParts.length !== pathParts.length) continue;
 
-//     if (trip.capital && trip.population) {
-//       const apiInfo = document.createElement("p");
-//       apiInfo.textContent = `Столиця: ${trip.capital}, Населення: ${trip.population}`;
-//       article.append(apiInfo);
-//     }
+    const params = {};
+    const isMatch = routeParts.every((part, i) => {
+      if (part.startsWith(":")) {
+        params[part.slice(1)] = pathParts[i]; // записуємо значення параметра
+        return true;
+      }
+      return part === pathParts[i];
+    });
+    if (isMatch) return { view: route.view, params };
+  }
+  return null;
+}
 
-//     if (trip.flagUrl) {
-//       const flagImg = document.createElement("img");
-//       flagImg.src = trip.flagUrl;
-//       flagImg.alt = `Прапор ${trip.destination}`;
-//       flagImg.classList.add("flag");
-//       article.append(flagImg);
-//     }
+// Зміна «сторінки» без перезавантаження: просто змінюємо хеш
+function navigate(path) {
+  location.hash = path;
+}
 
-//     listContainer.append(article);
-//   }
-//   // логіка лічильнику подорожей
-//   let tripsCount = document.querySelector("#trips_count");
-//   if (trips.length > 0) {
-//     tripsCount.textContent = `Всього подорожей: ${trips.length}`;
-//   } else {
-//     tripsCount.textContent = "Ви ще нікуди не подорожували";
-//   }
-// }
+// Один обробник на весь документ: перехоплює кліки по посиланнях з data-link
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("a[data-link]");
+  if (!link) return;
+  event.preventDefault();
+  navigate(link.getAttribute("href").slice(1)); // "#/trip/2" → "/trip/2"
+});
 
-// renderRoutes();
+function getPath() {
+  return location.hash.slice(1) || "/"; // порожній хеш — головна сторінка
+}
 
-// // вибір та обробка форми
-// const form = document.querySelector("#add_trip_form");
-// form.addEventListener("submit", (event) => {
-//   event.preventDefault();
+// Хук: зберігає поточний шлях у стані й оновлює його при кожній зміні хеша
+function useHashPath() {
+  const [path, setPath] = React.useState(getPath());
+  React.useEffect(() => {
+    const onChange = () => setPath(getPath());
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange); // прибираємо слухача
+  }, []);
+  return path;
+}
 
-//   const destinationValue = document.querySelector("#destination").value.trim();
-//   const daysValue = Number(document.querySelector("#days").value);
-//   const budgetValue = Number(document.querySelector("#budget").value);
+// Роутер: за поточним шляхом обирає view і малює її в контейнер
+function Router() {
+  const path = useHashPath();
+  const match = matchRoute(path);
+  if (!match) return <NotFoundPage />;
+  const View = match.view;
+  return <View params={match.params} />;
+}
 
-//   const newTrip = {
-//     destination: destinationValue,
-//     days: daysValue,
-//     budget: budgetValue,
-//   };
-
-//   trips.push(newTrip);
-
-//   renderRoutes();
-
-//   form.reset();
-// });
-
-// const daysInput = document.querySelector("#days");
-// const budgetInput = document.querySelector("#budget");
-
-// function validateDailyBudget() {
-//   const days = Number(daysInput.value);
-//   const budget = Number(budgetInput.value);
-
-//   // Перевіряємо, коли обидва поля заповнені й дні більші за нуль
-//   if (days > 0 && budgetInput.value !== "") {
-//     const daily = Math.round(budget / days);
-
-//     if (daily < MIN_DAILY_BUDGET) {
-//       budgetInput.setCustomValidity(
-//         `Бюджет на день (${daily} грн) занадто малий! Мінімум: ${MIN_DAILY_BUDGET} грн/день.`
-//       );
-//     } else {
-//       budgetInput.setCustomValidity(""); // Обов'язково скидаємо помилку, коли все добре
-//     }
-//   } else {
-//     budgetInput.setCustomValidity("");
-//   }
-// }
-
-// // Вішаємо перевірку «на льоту» на обидва поля
-// daysInput.addEventListener("input", validateDailyBudget);
-// budgetInput.addEventListener("input", validateDailyBudget);
-
-// // Вішаємо один обробник кліку на весь контейнер.
-// // При кліку на будь-який елемент всередині картки, скрипт знаходить саму картку (.route),
-// // дістає з неї текстові дані та атрибут dataset, і виводить їх у блок деталей.
-// const detailsText = document.querySelector("#route_details_section p");
-
-// listContainer.addEventListener("click", (event) => {
-//   const clickedTrip = event.target.closest(".route");
-//   if (!clickedTrip) {
-//     return;
-//   }
-
-//   const destinationName = clickedTrip.querySelector("h3").textContent;
-//   const tripInfo = clickedTrip.querySelector("p").textContent;
-//   const dailyCost = clickedTrip.dataset.costPerDay;
-//   detailsText.textContent = `Обрана подорож ${destinationName}. Умови ${tripInfo}. Витрати на день складуть близько ${dailyCost} грн.`;
-// });
-
-// // Функція для показу/приховування статусу завантаження
-// function showLoading(isLoading) {
-//   const statusDiv = document.getElementById("api_status");
-//   if (!statusDiv) return;
-
-//   if (isLoading) {
-//     statusDiv.textContent = "Завантаження даних...";
-//     statusDiv.style.color = "blue"; // Синій колір для процесу
-//   } else {
-//     // Прибираємо текст тільки якщо там статус завантаження
-//     // (щоб не затерти повідомлення про помилку, якщо вона сталася)
-//     if (statusDiv.textContent === "Завантаження даних...") {
-//       statusDiv.textContent = "";
-//     }
-//   }
-// }
-
-// // Функція для виведення помилки на екран
-// function showError(message) {
-//   const statusDiv = document.getElementById("api_status");
-//   if (statusDiv) {
-//     statusDiv.textContent = message;
-//     statusDiv.style.color = "red"; // Червоний колір для помилки
-//   }
-// }
-
-// // функція відповідає за підвантаження по АПІ даних про ту чи іншу країну з Rest Countries апі. Підтягує дані та створює картку з
-// // відповідними параметрами країни. Регулює поведінку мережевого індикатора.
-
-// // API: REST Countries v5, https://restcountries.com/docs/countries
-// async function loadDataCountry(countryName = "ukraine") {
-//   showLoading(true);
-
-//   try {
-//     const url = `${API_BASE}?q=${encodeURIComponent(
-//       countryName
-//     )}&response_fields_omit=names.translations&api-key=${API_KEY}`;
-//     const response = await fetch(url);
-
-//     if (response.status === 401 || response.status === 403) {
-//       throw new Error("Помилка доступу до API. Перевірте ключ.");
-//     }
-//     if (response.status === 404) {
-//       throw new Error("Країну не знайдено, перевірте написання.");
-//     }
-//     if (!response.ok) {
-//       throw new Error(`Код помилки: ${response.status}`);
-//     }
-
-//     const json = await response.json();
-//     console.log(json);
-//     const countries = json.data?.objects ?? [];
-
-//     // v5 повертає 200 з порожнім масивом, якщо нічого не знайдено
-//     if (countries.length === 0) {
-//       throw new Error("Країну не знайдено, перевірте написання.");
-//     }
-
-//     const country = countries[0];
-//     trips.push({
-//       destination: country.names.common,
-//       capital: country.capitals?.[0]?.name ?? "Немає даних",
-//       population: country.population,
-//       flagUrl: country.flag?.url_png,
-//       days: 5,
-//       budget: 15000,
-//     });
-//     renderRoutes();
-//   } catch (error) {
-//     if (error.message === "Failed to fetch") {
-//       showError(
-//         "Не вдалося завантажити дані. Перевірте підключення до Інтернету."
-//       );
-//     } else {
-//       showError(error.message);
-//     }
-//     console.error(error);
-//   } finally {
-//     showLoading(false);
-//   }
-// }
-
-// const reloadButton = document.querySelector("#page_reload");
-// const countrySearchInput = document.querySelector("#country_search");
-
-// reloadButton.addEventListener("click", () => {
-//   const query =
-//     countrySearchInput && countrySearchInput.value.trim() !== ""
-//       ? countrySearchInput.value.trim()
-//       : "ukraine";
-//   loadDataCountry(query);
-// });
-
-// loadDataCountry(
-//   countrySearchInput ? countrySearchInput.value.trim() : "ukraine"
-// );
+// Єдиний запуск React: Router малює потрібну сторінку в контейнер #app
+ReactDOM.createRoot(document.getElementById("app")).render(<Router />);

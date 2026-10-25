@@ -37,22 +37,7 @@ header > nav > a {
   font-weight: bold;
 }
 
-#country_search {
-  width: 200px;
-}
-
-#api_status {
-  margin-top: 10px;
-  font-weight: bold;
-}
-
-#page_reload {
-  cursor: pointer;
-  padding: 10px 15px;
-}
-
-main,
-#api_section {
+main {
   max-width: 90%;
   margin: 0 auto;
   padding: 10px;
@@ -61,10 +46,6 @@ main,
 img {
   max-width: 100%;
   height: auto;
-}
-
-#route_list_section {
-  margin-bottom: 15px;
 }
 
 .route_container {
@@ -80,31 +61,6 @@ img {
   border-radius: 10px;
   overflow: hidden;
   position: relative;
-}
-
-.route img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  display: block;
-  background-color: #0d9488;
-  border-radius: 10px;
-}
-
-.route img.flag {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 40px;
-  height: 28px;
-  object-fit: contain;
-  background: none;
-  border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.route:has(.flag) > h3 {
-  padding-right: 70px;
 }
 
 .route > h3 {
@@ -125,45 +81,9 @@ img {
   border-radius: 10px;
 }
 
-.status-circle {
-  position: absolute;
-  top: 25px;
-  right: 25px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* 
-  Нечітка вимога: «має надихати на подорожі». 
-  Інтерпретація: Вимогу реалізовано через підбір природної палітри для міток статусів подорожі. 
-  Глибокий небесно-синій (#185fa5) асоціюється з океаном, теракотовий захід (#993c1d) нагадує про скелі та архітектуру, 
-  а лісовий зелений (#3b6d11) символізує ліси. Ці кольори є виразними, але не кричущими; вони гармонійно 
-  доповнюють основний тон морської хвилі та викликають приємні асоціації з різними пейзажами, 
-  мотивуючи користувача до нових мандрівок.
-*/
-
-.status-planned {
-  background-color: #185fa5;
-}
-
-.status-ongoing {
-  background-color: #993c1d;
-}
-
-.status-completed {
-  background-color: #3b6d11;
-}
-
 .db_error {
   color: red;
-  font-weight: "bold";
-}
-
-#route_details_section {
-  margin: 100px 0 45px;
+  font-weight: bold;
 }
 
 #budget {
@@ -202,8 +122,7 @@ img {
 }
 
 @media screen and (min-width: 1024px) {
-  main,
-  #api_section {
+  main {
     max-width: 100%;
     margin: 0 50px;
   }
@@ -211,12 +130,9 @@ img {
   #budget {
     max-width: 100%;
   }
+
   .route_container {
     grid-template-columns: repeat(3, 1fr);
-  }
-
-  #budget {
-    max-width: 100%;
   }
 
   .wrapper {
